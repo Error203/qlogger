@@ -1,0 +1,6 @@
+
+Add a possibility to easily create loggers inside functions with the function name in a logger.
+So any function has the __name__ attribute, and I wanna somehow utilize this to simply create
+a logger and so it could automatically take the name of the function to not do it by hand.
+It can simplify the debugging, as not only the root class will have the name, but loggers of
+any function of this class.
