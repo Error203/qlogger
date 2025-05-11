@@ -50,59 +50,26 @@ class DefaultFormat(logging.Formatter):
 
 
 class Logger:
+	LEVELS = {
+	"notset": logging.NOTSET,
+	"debug": logging.DEBUG,
+	"info": logging.INFO,
+	"warning": logging.WARNING,
+	"error": logging.ERROR,
+	"critical": logging.CRITICAL,
+	}
 
 
-	def __init__(self, directory_name=None, level=None, file_stream=False, file_cap=None, color=None):
+	def __init__(self, directory_name="logs", level="info", file_stream=False, file_cap=None, color=None):
 
 		self.file_stream = file_stream
 		self.color = color
+		self.directory_name = directory_name
+		self.file_cap = file_cap
+		self.level = self.LEVELS.get(level.lower(), logging.INFO)
 
-		if self.file_stream:
-
-			if not directory_name:
-				directory_name = "logs"
-
-			if directory_name not in listdir("."):
-				mkdir(directory_name)
-
-			self.directory_name = directory_name
-
-		if not file_cap:
-
-			self.file_cap = 10
-
-		if level:
-
-			level = level.lower()
-
-		self.level = self.level_resolver(level)
-
-
-	def level_resolver(self, level=None):
-
-		if not level or level == "info":
-
-			return logging.INFO
-
-		if level == "debug":
-
-			return logging.DEBUG
-
-		if level == "warning":
-
-			return logging.WARNING
-
-		if level == "error":
-
-			return logging.ERROR
-
-		if level == "critical":
-
-			return logging.CRITICAL
-
-		else:
-
-			return logging.NOTSET
+		if self.file_stream and not path.exists(self.directory_name):
+			mkdir(self.directory_name)
 
 
 	def prevent_overwriting(self, file_name):
@@ -118,10 +85,11 @@ class Logger:
 		WOULD MAKE SOME USE FOR THE USER, OKAY?
 		'''
 		base_name, ext = path.splitext(file_name)
+		i = 1
+		while file_name in listdir(self.directory_name):
 
-		if file_name in listdir(self.directory_name):
-
-			return base_name + " (2)" + ext
+			file_name = f"{base_name} ({i}){ext}"
+			i += 1
 
 		return file_name
 
@@ -163,46 +131,45 @@ class Logger:
 		if name == "root":
 			print("WARNING: it's better not use name 'root' for logger name as it'll double the output")
 
-		if self.file_stream:
-			file_name = strftime("[%d-%m-%y] %H-%M-%S.log")
-			file_name = self.prevent_overwriting(file_name)
-
 		logger = logging.getLogger(name)
 		logger.setLevel(logging.DEBUG)
+
+		if logger.hasHandlers():
+			logger.handlers.clear()
+
 		stream_handler = logging.StreamHandler()
-
-		stream_handler.setFormatter(DefaultFormat())
-		
-		if self.color:
-
-			stream_handler.setFormatter(ColoredFormat())
-
+		formatter = ColoredFormat() if self.color else DefaultFormat()
+		stream_handler.setFormatter(formatter)
 		stream_handler.setLevel(self.level)
+		logger.addHandler(stream_handler)
+
 
 		if self.file_stream:
 
 			self.process_cap()
 
-			file_handler = logging.FileHandler(path.join(self.directory_name, file_name))
-			file_formatter = logging.Formatter(fmt="[%(asctime)s] %(name)s, %(levelname)s: %(message)s")
-			file_handler.setFormatter(file_formatter)
+			filename = self.prevent_overwriting(strftime("[%d-%m-%y] %H-%M-%S.log"))
+			file_path = path.join(self.directory_name, filename)
+
+			file_handler = logging.FileHandler(file_path)
+			file_formatter = "[%(asctime)s] %(name)s, %(levelname)s: %(message)s"
+			file_handler.setFormatter(logging.Formatter(file_formatter))
 			file_handler.setLevel(logging.DEBUG)
-			file_logger = logging.getLogger(name)
-			file_logger.addHandler(file_handler)
-			print(file_logger.handlers)
+
 			logger.addHandler(file_handler)
 
-		logger.addHandler(stream_handler)
-
-		return (logger, file_logger)
+		return logger
 
 
 def main():
 
-	log = Logger(file_stream=True)
-	logger = log.get_logger("testing")[1]
+	log = Logger(file_stream=True, level="debug", color=True, file_cap=5)
+	logger = log.get_logger("testing")
+
+	logger.debug("debug")
 	logger.info("hello world")
 	logger.warning("warning msg")
+	logger.error("error msg")
 	logger.critical("critical msg")
 
 
