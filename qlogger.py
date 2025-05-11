@@ -163,8 +163,9 @@ class Logger:
 		if name == "root":
 			print("WARNING: it's better not use name 'root' for logger name as it'll double the output")
 
-		file_name = strftime("[%d-%m-%y] %H-%M-%S.log")
-		file_name = self.prevent_overwriting(file_name)
+		if self.file_stream:
+			file_name = strftime("[%d-%m-%y] %H-%M-%S.log")
+			file_name = self.prevent_overwriting(file_name)
 
 		logger = logging.getLogger(name)
 		logger.setLevel(logging.DEBUG)
